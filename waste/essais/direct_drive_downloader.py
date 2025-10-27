@@ -15,6 +15,7 @@ SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
 
 def obtenir_credentials():
+    
     """Obtient les credentials Google Drive"""
     creds = None
 

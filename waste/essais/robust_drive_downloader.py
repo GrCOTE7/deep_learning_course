@@ -37,7 +37,7 @@ class RobustDriveDownloader:
             else:
                 print("🚀 Authentification requise...")
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json", SCOPES
+                    "waste/essais/credentials.json", SCOPES
                 )
                 creds = flow.run_local_server(port=0)
 

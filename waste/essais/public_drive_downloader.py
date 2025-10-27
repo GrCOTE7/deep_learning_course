@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 
 def telecharger_fichier_public_google_drive(
-    file_id, nom_fichier="archive.zip", destination="./datasets/"
+    file_id, nom_fichier="WASTE.zip", destination="./datasets/"
 ):
     """
     Télécharge un fichier Google Drive partagé publiquement

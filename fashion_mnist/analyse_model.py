@@ -1,6 +1,7 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import pickle
+import pandas as pd
 
 
 def display_best_scores(history):
@@ -21,6 +22,20 @@ def display_best_scores(history):
     print(
         f"✅ Meilleure Val_Accuracy: {best_val_accuracy:.4f} (Époque {best_val_accuracy_epoch})"
     )
+
+    # Analyse du surapprentissage
+    gap = (best_accuracy - best_val_accuracy) * 100
+    print("-" * 60)
+    print(f"🔍 ÉCART (Overfitting): {gap:.2f}%")
+
+    if gap < 3:
+        print("✅ Excellent! Pas de surapprentissage significatif")
+    elif gap < 7:
+        print("⚠️  Surapprentissage modéré - acceptable")
+    else:
+        print("❌ Surapprentissage important - besoin de régularisation")
+
+    print(f"🎯 Score de production attendu: ~{best_val_accuracy:.2%}")
     print("=" * 60)
     print()
 
@@ -62,11 +77,49 @@ def bilan_model(model_name):
     print()
 
     # Charger le modèle
-    model = tf.keras.models.load_model(f"best_model_{model_name}.keras")
+    model = tf.keras.models.load_model(f"{model_name}/best_model_{model_name}.keras")
 
     # Charger l'historique d'entraînement
-    with open(f"training_history_{model_name}.pkl", "rb") as f:
-        history = pickle.load(f)
+    with open(f"{model_name}/training_history_{model_name}.pkl", "rb") as f:
+        training_data = pickle.load(f)
+
+    # Gérer l'ancien et le nouveau format
+    if isinstance(training_data, dict) and "history" in training_data:
+        # Nouveau format avec métadonnées
+        history = training_data["history"]
+        execution_time = training_data.get("execution_time", None)
+        config = training_data.get("training_config", {})
+    else:
+        # Ancien format (juste l'historique)
+        history = training_data
+        execution_time = None
+        config = {}
+
+    # Afficher les infos d'entraînement si disponibles
+    if execution_time or config:
+        print("⏱️  INFORMATIONS D'ENTRAÎNEMENT")
+        print("=" * 60)
+        if execution_time:
+            hours = int(execution_time // 3600)
+            minutes = int((execution_time % 3600) // 60)
+            seconds = execution_time % 60
+            print(f"🕒 Temps d'exécution: {hours:02d}:{minutes:02d}:{seconds:05.2f}")
+
+        if config:
+            if "epochs_planned" in config:
+                print(f"📈 Époques planifiées: {config['epochs_planned']}")
+            if "epochs_executed" in config:
+                print(f"✅ Époques exécutées: {config['epochs_executed']}")
+            if "patience" in config:
+                print(f"⏳ Patience Early Stopping: {config['patience']}")
+        print()
+
+    # Afficher le bilan détaillé avec pandas
+    print("📊 BILAN DÉTAILLÉ DE L'ENTRAÎNEMENT")
+    print("=" * 60)
+    history_df = pd.DataFrame(history)
+    print(history_df.round(4))  # Arrondir à 4 décimales pour une meilleure lisibilité
+    print()
 
     # Afficher le résumé du modèle
     print("📋 RÉSUMÉ DU MODÈLE")

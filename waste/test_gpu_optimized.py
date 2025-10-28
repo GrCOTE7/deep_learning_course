@@ -80,7 +80,7 @@ gpus = configure_gpu()
 diagnostic_gpu()
 
 # Define data directories
-data_dir = f"../datasets/{model_name.upper()}/"
+data_dir = "D:/dl/datasets/WASTE/"
 train_dir = os.path.join(data_dir, "TRAIN")
 test_dir = os.path.join(data_dir, "TEST")
 
@@ -94,39 +94,60 @@ if not os.path.exists(train_dir) or not os.path.exists(test_dir):
 print(f"✅ Données trouvées dans: {data_dir}")
 
 # ============================================================================
-# GÉNÉRATEURS DE DONNÉES OPTIMISÉS
+# PIPELINE DE DONNÉES TF.DATA OPTIMISÉ
 # ============================================================================
 
-# Générateurs avec prefetch et cache pour optimiser le pipeline
-train_data_generator = ImageDataGenerator(
-    rescale=1.0 / 255,
-    rotation_range=20,  # Augmentation des données
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    horizontal_flip=True,
-)
+batch_size = 16  # Réduit de 64 à 16 pour éviter les erreurs de mémoire GPU
+img_height = 224
+img_width = 224
 
-test_data_generator = ImageDataGenerator(rescale=1.0 / 255)
+# Création des datasets
+train_ds = tf.keras.utils.image_dataset_from_directory(
+    train_dir,
+    labels='inferred',
+    label_mode='binary',
+    image_size=(img_height, img_width),
+    batch_size=batch_size)
 
-# Batch size plus important si GPU disponible
-batch_size = 64 if gpus else 32
+val_ds = tf.keras.utils.image_dataset_from_directory(
+    test_dir,
+    labels='inferred',
+    label_mode='binary',
+    image_size=(img_height, img_width),
+    batch_size=batch_size)
 
-train_generator = train_data_generator.flow_from_directory(
-    directory=train_dir,
-    target_size=(224, 224),
-    batch_size=batch_size,
-    class_mode="binary",
-)
+class_names = train_ds.class_names
+print(f"📂 Classes trouvées: {class_names}")
 
-test_generator = test_data_generator.flow_from_directory(
-    directory=test_dir,
-    target_size=(224, 224),
-    batch_size=batch_size,
-    class_mode="binary",
-)
+# Création d'une couche pour l'augmentation des données
+data_augmentation = tf.keras.Sequential([
+    tf.keras.layers.RandomFlip("horizontal"),
+    tf.keras.layers.RandomRotation(0.2),
+    tf.keras.layers.RandomZoom(0.2),
+])
+
+# Normalisation et prefetching
+AUTOTUNE = tf.data.AUTOTUNE
+
+def prepare(ds, shuffle=False, augment=False):
+    # Redimensionnement et normalisation
+    rescale = tf.keras.layers.Rescaling(1./255)
+    ds = ds.map(lambda x, y: (rescale(x), y), num_parallel_calls=AUTOTUNE)
+
+    if shuffle:
+        ds = ds.shuffle(1000)
+
+    # Augmentation des données
+    if augment:
+        ds = ds.map(lambda x, y: (data_augmentation(x, training=True), y), num_parallel_calls=AUTOTUNE)
+
+    # Utiliser le prefetch pour de meilleures performances
+    return ds.cache().prefetch(buffer_size=AUTOTUNE)
+
+train_ds = prepare(train_ds, shuffle=True, augment=True)
+val_ds = prepare(val_ds)
 
 print(f"📊 Batch size: {batch_size}")
-print(f"📂 Classes trouvées: {train_generator.class_indices}")
 
 # ============================================================================
 # MODÈLE CNN OPTIMISÉ
@@ -175,7 +196,7 @@ model = create_optimized_model()
 
 # Compilation avec optimiseur plus moderne
 model.compile(
-    optimizer=tf.keras.optimizers.AdamW(learning_rate=0.001, weight_decay=0.01),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
     loss="binary_crossentropy",
     metrics=["accuracy"],
 )
@@ -215,9 +236,9 @@ start_time = time.time()
 
 # Entraînement avec plus d'epochs pour voir l'activité
 history = model.fit(
-    train_generator,
-    epochs=10,  # Plus d'epochs pour observer
-    validation_data=test_generator,
+    train_ds,
+    epochs=1,  # Plus d'epochs pour observer
+    validation_data=val_ds,
     callbacks=callbacks,
     verbose=1,
 )
@@ -231,7 +252,7 @@ print(f"\n✅ Entraînement terminé en {training_time:.2f}s")
 # ============================================================================
 
 print("\n📊 ÉVALUATION FINALE:")
-loss, accuracy = model.evaluate(test_generator, verbose=1)
+loss, accuracy = model.evaluate(val_ds, verbose=1)
 print(f"   • Loss: {loss:.4f}")
 print(f"   • Accuracy: {accuracy:.4f}")
 

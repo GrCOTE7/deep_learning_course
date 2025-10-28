@@ -10,7 +10,7 @@ tf.config.threading.set_intra_op_parallelism_threads(0)  # 0 = tous les cœurs
 tf.config.threading.set_inter_op_parallelism_threads(0)  # 0 = optimal automatique
 
 # Define data directories (adjust paths if needed)
-data_dir = f"../datasets/{model_name.upper()}/"  # Dataset is in parent directory
+data_dir = f"./datasets/{model_name.upper()}/"  # Dataset is in parent directory
 train_dir = os.path.join(data_dir, "TRAIN")
 test_dir = os.path.join(data_dir, "TEST")
 

@@ -3,3 +3,4 @@ DATASET_ori/
 best_model_*.*
 training_history_*.pkl
 credentials.json
+.venv

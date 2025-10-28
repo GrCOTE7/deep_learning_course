@@ -3,20 +3,22 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-model_name = "poubelle"
+model_name = "waste"
 
 # Forcer l'utilisation de tous les threads (Donc du GPU)
-# tf.config.threading.set_intra_op_parallelism_threads(0)  # 0 = tous les cœurs
-# tf.config.threading.set_inter_op_parallelism_threads(0)  # 0 = optimal automatique
+tf.config.threading.set_intra_op_parallelism_threads(0)  # 0 = tous les cœurs
+tf.config.threading.set_inter_op_parallelism_threads(0)  # 0 = optimal automatique
 
 # Define data directories (adjust paths if needed)
-data_dir = "DATASET"  # Make sure DATASET folder is in the same directory as your script, or provide the full path
+data_dir = f"../datasets/{model_name.upper()}/"  # Dataset is in parent directory
 train_dir = os.path.join(data_dir, "TRAIN")
 test_dir = os.path.join(data_dir, "TEST")
 
 # Check if data directories exist (important for local execution)
 if not os.path.exists(train_dir) or not os.path.exists(test_dir):
-    print("Error: DATASET/TRAIN or DATASET/TEST directories not found.")
+    print(
+        f"Error: ../datasets/{model_name.upper()}/TRAIN or ../datasets/{model_name.upper()}/TEST directories not found."
+    )
     print("Please make sure the DATASET folder is in the same directory as your script")
     print("or update the 'data_dir' variable with the correct path.")
     exit()  # Exit the script if directories are not found
